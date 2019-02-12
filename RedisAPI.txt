@@ -1,0 +1,64 @@
+通用命令
+命令						作用						时间复杂度
+keys * 					遍历所有的key			O(n)
+keys his*				查找开头是his的key		O(1)
+dbsize 					计算key总数 				O(1)
+exists key 				判断key是否存在 			O(1)
+del key [key...] 		删除key 					O(1)
+expire key seconds      key在seconds秒后过期  	O(1)
+ttl key                 查看key剩余时间  			O(1)
+persis key 	 			去掉key多余时间  			O(1)
+type key  				返回key类型  			O(1)
+
+数据结构(内部编码)
+string(raw、int、embstr)
+hash(hashtable、ziplist)
+list(linkedlist、ziplist)
+set(hashtable、intset)
+zset(skiplist、ziplist)
+
+单线程
+为什么那么快
+1.纯内存
+2.非阻塞IO
+3.避免线程切换和竞争消耗
+注意
+1.一次只运行一条命令
+2.拒绝长（慢）命令
+eg:keys、flushall、flushdb、slow lua script、mutil/exec、operate big value(collection)
+3.其实不是单线程（fysnc file descriptor 、close file descritor）
+
+
+
+字符串
+场景：缓存、计数器、分布式锁
+API
+get key    获取值                          						O(1)
+set key    设置键值												O(1)
+del key    删除key												O(1)
+incr key   key自增1，key不存在，自增后get(key) = 1				O(1)
+decr key   key自减1, key不存在，自减后get(key) = -1				O(1)
+incrby key key自增k,如果key不存在，自增后get(key) = k 			O(1)
+decrby key key自减k,如果key不存在，自增后get(key) = -k 			O(1)
+
+set   key value     不管key是否存在，都设置						O(1)
+setnx key value		key不存在，才设置								O(1)
+set   key value xx  key不存在，才设置 							O(1)
+
+mget key1 key2 key3                      批量获取key,原子操作    O(n)
+mset key1 value1 key2 value2 key3 value3 批量设置key-value   	O(n)
+
+getset key newvalue    set key newvalue并返回旧的value   		O(1) 
+append key value 	   将value追加到旧的value 					O(1)
+strlen key 			   返回字符串的长度							O(1)
+
+incrbyfloat key 3.5      增加key对应的值3.5						O(1)
+getrange key start end   获取指定字符串指定下标所有的值			O(1)
+setrange key index value 设置指定下标所有对应的值					O(1)
+
+
+
+
+
+
+

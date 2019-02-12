@@ -22,3 +22,10 @@ daemonize	是否是守护进程(no|yes)
 port		redis对外端口
 logfile		redis系统日志
 dir			redis工作目录
+
+
+安装redis
+[root@localhost soft]# wget http://download.redis.io/releases/redis-5.0.3.tar.gz
+[root@localhost soft]# tar -xvf redis-5.0.3.tar.gz
+[root@localhost redis-3.0.7]# make all
+[root@localhost redis-3.0.7]# make install
