@@ -16,6 +16,7 @@ public String set(String key, String value)							 新增(存在则覆盖)键值
 public Long setnx(String key, String value)							 新增(存在不插入)键值对
 public String setex(String key, int seconds, String value)			 新增数据并设置有效时间
 public Long del(String key)											 删除key
+public String get(String key)										 获取key对应的值
 public Long append(String key, String value)						 在key对应的值后面追加value
 public String mset(String... keysvalues)							 增加多个键值对
 public List<String> mget(String... keys) 							 获取多个key对应的值
