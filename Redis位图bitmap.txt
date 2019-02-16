@@ -1,0 +1,8 @@
+位图bitmap
+
+API
+setbit key offset value 		给位图指定索引设置值
+getbit key offset  				获取位图指定索引值
+bitcount key [start end] 		获取位图指定范围(start到end，单位为字节m，如果不指定就是获取全部)位值为1的个数
+bitop op destkey key [key...] 	做多个Bitmap的and(交集),or(并集),not(非),xor(异或)操作并将结果保存到destkey中
+bitpos key targeBit[start][end] 计算位图指定范围(start到end,单位为字节,如果不指定就是获取全部)第一个偏移量对应的值等于targetBit的位置
