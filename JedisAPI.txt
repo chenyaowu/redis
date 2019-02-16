@@ -1,4 +1,10 @@
-Jedis jedis = new Jedis(String ip, String port); 创建Jedis对象
+Jedis jedis = new Jedis(String ip, int port); 	Jedis直连
+Jedis连接池的使用
+GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+JedisPool jedisPool = new JedisPool(poolConfig,String ip,int port);
+Jedis jedis = jedisPool.getResource();
+
+
 
 键相关操作
 public String jedis.flushDB()					清空数据	
