@@ -1,0 +1,36 @@
+redis客户端请求生命周期
+client ->1.发送命令->2.排队->3.执行命令->4.返回结果->client
+
+慢查询
+(1)慢查询发送在执行命令过程
+(2)客户端超时不一定是慢查询，但慢查询是客户端超时的一个因素
+
+配置
+slowlog-max-len
+1.先进先出
+2.固定长度
+3.保存在内存内
+slowlog-log-slower-than
+1.慢查询阈值(ms)
+2.slowlog-log-slower-than=0，记录所有命令
+3.slowlog-log-slower-than<0，不记录任何命令
+
+配置方法
+1.默认值
+config get slowlog-max-len = 128
+config get slowlog-log-slower-than= 10000
+2.修改配置文件后重启(不建议)
+3.动态配置
+config set slowlog-max-len 1000
+config set slowlog-log-slower-than 1000
+
+相关命令
+slowlog get [n] 	获取n条慢查询队列
+slowlog len 		获取慢查询队列长度
+slowlog reset 		清空慢查询队列
+
+运维经验
+slowlog-max-len不要设置过大，默认10ms，通常1ms
+slowlog-log-slower-than不要设置过小，通常设置1000左右
+理解命令生命周期
+定期持久化慢查询
