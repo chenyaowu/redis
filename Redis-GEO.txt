@@ -1,0 +1,22 @@
+GEO
+GEO(地理位置信息)：存储经纬度，计算两地巨鹿，范围计算等
+
+API
+geoadd key longitude latitude member [longitude latitude member... ] 增加地理信息
+geopos key member [member...] 										 获取地理位置信息
+geodist key member1 member2 [unit] 									 获取两个地理位置的距离 unit:m、km、mi(英里)、ft(尺)
+
+获取指定位置范围内的地理位置信息集合
+georadius key longitude latitude radiusm|km|ft|mi [withcoord] [withdist]
+[withhash] [COUNT count] [asc|desc] [store key][storedist key] 
+
+georadiusbymember key member radiusm|km|ft|mi [withcoord]
+[withdist] [withhash] [COUNT count] [asc|desc] [store key][storedist key] 
+
+withcoord 		返回结果中包含经纬度
+withdist 		返回结果中包含距离中心节点位置
+withhash 		返回结果中包含geohash
+COUNT count 	指定返回结果的数量
+asc|desc 		返回结果按照距离中心节点的距离做升序或降序
+store key  		将返回结果的地理位置信息保存到指定键
+storedist key 	将返回结果距离中心节点的距离保存到指定的键
