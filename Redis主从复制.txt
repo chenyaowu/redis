@@ -1,0 +1,88 @@
+单机redis存在的问题
+1.机器故障，数据丢失，连接失败
+2.容量瓶颈
+3.QPS瓶颈
+
+主从复制作用
+数据副本
+扩展读性能
+
+实现方式
+1.slaveof命令
+eg:
+:6380(从节点)
+:6379(主节点)
+设置     127.0.0.1:6380>slaveof 127.0.0.1 6379
+取消设置 127.0.0.1:6380>slaveof no one 
+
+2.配置
+从节点配置
+slaveof ip port
+slave-read-only yes
+
+
+全量复制
+1.slave ———— psync?-1 ————> master
+2.master ———— +FULLRESYNC{runId}{offset} ————> slave
+3.slave ———— save masterInfo ————> slave
+4.master ———— bgsave ————> master
+5.master ———— send RDB ————> slave
+6.master ———— send buffer ————> slave
+7.slave ———— flush old data ————> slave
+8.slave ———— load RDB ————> slave
+
+全量复制开销
+1.bgsave时间
+2.RDB文件网络传输时间
+3.从节点清空数据时间
+4.从节点加载RDB时间
+5.可能的AOF重写时间
+
+
+部分复制（redis2.8)
+1.slave ———— Connection lost ————> master
+2.master ———— write->send buffer->repl_back_buffer ————> master
+3.slave ———— Connection to master ————> master
+4.slave ———— pysnc {offset}{runId} ————> master
+5.master ———— CONTINUE ————> slave
+6.master ———— send partial data ————> slave
+
+
+故障处理
+slave故障/master故障
+
+
+开发运维中的问题
+1.读写分离
+读流量分摊到从节点
+问题：
+复制数据延迟
+读到过期数据
+从节点故障
+
+2.主从配置不一致
+ 1.例如maxmemory不一致：丢失数据
+ 2.例如数据结构优化参数(hash-max-ziplist-entries):内存不一致
+
+3.规避全量复制
+ 1.第一次全量复制，第一次不可避免
+  小主节点，低峰
+ 2.节点run id不匹配
+  主节点重启(run id变化)
+  故障转移，例如哨兵或集群
+ 3.复制积压缓冲区不足
+  网络中断，部分复制无法满足
+  增大复制缓冲区配置rel_backlog_size，网络"增强"
+
+4.规避复制风暴(一个主节点多个从节点，主节点宕机，重启，多个从节点复制数据)
+  1.单主节点复制风暴
+  问题：主节点重启，多从节点复制
+  解决：更换复制拓扑
+  2.单机器复制风暴
+  问题：机器宕机后，大量全量复制
+  解决：主节点分散多机器
+
+
+
+
+
