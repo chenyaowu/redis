@@ -10,42 +10,38 @@
 
 ## 扩容集群
 
-## 收缩集群
-
 1. 准备节点
 
-   1. 集群模式
+   - 集群模式
 
-   2. 配置和其他节点统一
+   - 配置和其他节点统一
 
-   3. 启动后是孤儿节点
+   - 启动后是孤儿节点
 
-   4. ```bas
-      redis-server conf/redis-6385.conf      redis-server conf/redis-6386.conf 
-      ```
-
-      ![启动后效果图](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster1.jpg)
+   ![启动后效果图](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster1.jpg)
 
 2. 加入集群
 
-   1. reids-cli方法
+   - reids-cli方法
 
-      ```bash
-      127.0.0.1:6379>cluster meet 127.0.0.1 6385
-      
-      127.0.0.1:6379>cluster meet 127.0.0.1 6386
-      ```
+   ```bash
+   127.0.0.1:6379>cluster meet 127.0.0.1 6385
+   
+   127.0.0.1:6379>cluster meet 127.0.0.1 6386
+   ```
 
-      ![加入后效果图](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster2.jpg)
+   ![加入后效果图](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster2.jpg)
 
-   2. redis-trib.rb方法
+   
 
-      ```bash
-      redis-trib add-node new_host:new_port existing_host:existing_port --slave --master-id <arg>
-      redis-trib add-node 127.0.0.1:6385 127.0.0.1:6379
-      ```
+   - redis-trib.rb方法
 
-      建议使用redis-trib.rb能够避免新节点已经加入了其他集群，造成故障。
+   ```bash
+   redis-trib add-node new_host:new_port existing_host:existing_port --slave --master-id <arg>
+   redis-trib add-node 127.0.0.1:6385 127.0.0.1:6379
+   ```
+
+   建议使用redis-trib.rb能够避免新节点已经加入了其他集群，造成故障。
 
    加入集群作用
 
