@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="jedisClusterFactory" class="com.chen.redis.factory.JedisClusterFactory" init-method="init" destroy-method="destory">
+        <property name="hostPortList">
+            <list>
+                <value>192.168.1.7:7000</value>
+                <value>192.168.1.7:7001</value>
+                <value>192.168.1.7:7002</value>
+                <value>192.168.1.7:7003</value>
+                <value>192.168.1.7:7004</value>
+                <value>192.168.1.7:7005</value>
+            </list>
+        </property>
+        <property name="timeout" value="0"/>
+    </bean>
+    <bean id="jedisCluster" factory-bean="jedisClusterFactory" factory-method="getJedisCluster">
+
+    </bean>
+    <bean id="redisClusterService" class="com.chen.redis.service.RedisClusterServiceImpl"/>
+</beans>
