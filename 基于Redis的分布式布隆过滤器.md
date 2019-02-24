@@ -25,9 +25,11 @@
 - 实际误差公式：
   1. 1个元素，1个hash函数，任意一个比特为1的概率为 $ \frac{1}{m}$，依然为0的概率为$1- \frac{1}{m}$
   2.  k个函数，依然为0的概率为$ （1-\frac{1}{m}）^k​$，n个元素，依然为0的概率为$ {_{(1-\frac{1}{m})}}^{nk}​$
-  3. 被设置为1的概率为$1- {_{(1-\frac{1}{m})}}^{nk}$
+  3. 被设置为1的概率为$1- {_{(1-\frac{1}{m})}}^{nk}​$
   4. 新元素全中的概率为$(1-{_{(1-\frac{1}{m})}}^{nk})^{k}$ ≈ $(1-e-\frac{kn}{m})^k$
 - m/n与误差率成反比，k与误差率成反比
+
+
 
 ## 本地布隆过滤器
 
@@ -35,6 +37,19 @@
 - 本地布隆过滤器的问题：
   1. 容量受限制
   2. 多个应用存在多个布隆过滤器，构建同步复杂
+
+## 基于Redis布隆过滤器
+
+![redis布隆过滤器](https://github.com/chenyaowu/redis/blob/master/image/RedisBloom1.jpg)
+
+- 基于位图实现
+
+  ![基于位图实现](https://github.com/chenyaowu/redis/blob/master/image/RedisBloom2.jpg)
+
+  - 定义布隆过滤器构造函数:m、n、k、误差率
+  - 定义布隆过滤器操作函数:add和contain
+  - 封装Redis位图操作
+  - 开发测试样例
 
 ## Redis单机布隆过滤器
 
