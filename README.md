@@ -1,5 +1,7 @@
 # Redis
 
+[TOC]
+
 ## redis特性
 
 1. **速度快**（10w ops）:数据存储在内存，C语言实现，单线程
@@ -31,11 +33,11 @@
   | redis-check-dump | RDB文件检查工具   |
   | redis-sentinel   | Sentinel服务器    |
 
-- 常用配置
-  daemonize	是否是守护进程(no|yes)
-  port		    对外端口
-  logfile		 系统日志
-  dir		       工作目录
+- 常用配置</br>
+  daemonize	是否是守护进程(no|yes)</br>
+  port		    对外端口</br>
+  logfile		 系统日志</br>
+  dir		       工作目录</br>
 
 - Redis单线程(为什么那么快)
 
