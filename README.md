@@ -2,7 +2,7 @@
 
 ## 目录
 
-- [redis特性](https://github.com/chenyaowu/redis#redis%E7%89%B9%E6%80%A7)
+- redis特性](https://github.com/chenyaowu/redis#redis%E7%89%B9%E6%80%A7)
 - [Redis API](https://github.com/chenyaowu/redis#redis-api)
 - [Jedis API](https://github.com/chenyaowu/redis#jedisapi)
 
