@@ -25,7 +25,17 @@
   - [哈希操作](#哈希操作)
   - [有序集合操作](#有序集合操作)
   - [排序](#排序)
-
+- [功能](#功能)
+  - [HyperLogLog](#HyperLogLog) 
+  - [GEO](#GEO) 
+  - [慢查询](#慢查询) 
+  - [流水线pipeline](#流水线pipeline) 
+  - [发布订阅](#发布订阅)
+  - [位图bitmap](#位图bitmap)
+- [Redis持久化](#Redis持久化)
+  - [RDB](#RDB)
+  - [AOF](#AOF)
+  
 ## redis特性
 
 1. **速度快**（10w ops）:数据存储在内存，C语言实现，单线程
@@ -78,7 +88,7 @@
 
 ### 数据结构和内部编码
 
-![数据结构和内部编码](/blob/master/image/dataStructure.jpg)
+![数据结构和内部编码](https://github.com/chenyaowu/redis/blob/master/image/dataStructure.jpg)
 
 ### 通用命令
 
@@ -477,4 +487,196 @@ sortingParams.desc();
   | pfcount key [key...]                     | 计算hperLogLog的独立总数 |
   | pfmerge destkey sourcekey [sourcekey...] | 合并多个hyperLogLog      |
 
+- 内存消耗(百万独立用户)
+
+  | 使用天数 | 内存消耗 |
+  | -------- | -------- |
+  | 1天      | 15KB     |
+  | 1个月    | 450KB    |
+  | 1年      | 5MB      |
+
+- 使用经验：1.是否能容忍错误？（错误率：0.81%）。2.是否需要单条数据？
+
   
+
+### GEO
+
+- GEO(地理位置信息)：存储经纬度，计算两地巨鹿，范围计算等
+
+- API
+
+  | 命令                                                         | 作用                                                |
+  | ------------------------------------------------------------ | --------------------------------------------------- |
+  | geoadd key longitude latitude member [longitude latitude member... ] | 增加地理信息                                        |
+  | geopos key member [member...]                                | 获取地理位置信息                                    |
+  | eodist key member1 member2 [unit]                            | 获取两个地理位置的距离 unit:m、km、mi(英里)、ft(尺) |
+  | georadius key longitude latitude radiusm\|km\|ft\|mi\|[withcoord] [withdist] [withhash] [COUNT count] [asc\|desc] [store key] [storedist key] | 获取指定位置范围内的地理位置信息集合                |
+  | georadiusbymember key member radiusm\|km\|ft\|mi [withcoord] [withdist]   [withhash] [COUNT count] [asc\|desc] [store key] [storedist key] | 获取指定位置范围内的地理位置信息集合                |
+
+  参数说明
+
+  | 参数                                   | 作用 |
+  | -------------------------------------- | ---- |
+	|withcoord 		|返回结果中包含经纬度|
+	|withdist 		|返回结果中包含距离中心节点位置|
+	|withhash 		|返回结果中包含geohash|
+	|COUNT count 	|指定返回结果的数量|
+	|asc|desc 		|返回结果按照距离中心节点的距离做升序或降|序|
+	|store key  		|将返回结果的地理位置信息保存到指定键|
+	|storedist key 	|将返回结果距离中心节点的距离保存到指定的键|
+
+  
+
+### 慢查询
+
+- Redis生命周期
+
+  ![Redis生命周期](https://github.com/chenyaowu/redis/blob/master/image/life_cycle.jpg)
+
+  - 慢查询发生在第三阶段执行命令期间
+  - 客户端超时不一定是慢查询，但慢查询是客户端超时的一个因素
+
+- 两个配置（记录慢查询）
+
+  - slowlog-max-len
+    1. 先进先出
+    2. 固定长度
+    3. 保存在内存内
+  - slowlog-log-slower-than
+    1. 慢查询阈值(ms)
+    2. slowlog-log-slower-than=0，记录所有命令
+    3. slowlog-log-slower-than<0，不记录任何命令
+
+- 配置方法
+
+  1. 默认值
+     config get slowlog-max-len = 128
+     config get slowlog-log-slower-than= 10000
+  2. 修改配置文件后重启(不建议)
+  3. 动态配置
+     config set slowlog-max-len 1000
+     config set slowlog-log-slower-than 1000
+
+- 相关命令
+
+  | 命令            | 作用               |
+  | --------------- | ------------------ |
+  | slowlog get [n] | 获取n条慢查询队列  |
+  | slowlog len     | 获取慢查询队列长度 |
+  | slowlog reset   | 清空慢查询队列     |
+
+- 运维经验
+
+  - slowlog-max-len不要设置过大，默认10ms，通常1ms
+  - slowlog-log-slower-than不要设置过小，通常设置1000左右
+  - 理解命令生命周期
+  - 定期持久化慢查询
+
+### 流水线pipeline
+
+- 作用(为了解决减少n次网络通信时间)
+
+  | 命令                 | 时间            | 数据量  |
+  | -------------------- | --------------- | ------- |
+  | n个命令操作          | n次网络+n次命令 | 1条命令 |
+  | 1次pipeline(n个命令) | 1次网络+n次命令 | n条命令 |
+
+- Jedis实现(pipeline操作不是原子操作)
+
+  ```java
+  //不使用pipeline:
+  for(int i=0; i<10000; i++){
+  	jedis.hset("hashkey:" + i, "field" + i, "value" + i);
+  }
+  
+  
+  //使用pipeline
+  Pipeline pipeline = jedis.pipelined();
+  for(int i=0; i<10000; i++){
+  	pipeline.hset("hashkey:" + i, "field" + i, "value" + i);
+  }
+  pipeline.syncAndReturnAll();
+  ```
+
+- 使用建议
+
+  1. 注意每次pipeline携带数据量
+
+  2. pipeline每次只能作用在一个redis节点上
+
+  3. M操作与pipeline的区别
+
+     ![M操作](https://github.com/chenyaowu/redis/blob/master/image/pipeline1.jpg)
+
+     ![pipeline](https://github.com/chenyaowu/redis/blob/master/image/pipeline2.jpg)
+
+### 发布订阅
+
+- 角色
+
+  - 发布者(publisher)
+  - 订阅者(subscriber)
+  - 频道(channel)
+
+- 模型
+
+  ![模型1](https://github.com/chenyaowu/redis/blob/master/image/publish_subscrib_module.jpg)
+
+  ![模型2](https://github.com/chenyaowu/redis/blob/master/image/publish_subscrib_module2.jpg)
+
+- API
+
+  | 命令 | 作用 |
+  | ---- | ---- |
+  |publish channel message 		|发布消息|
+  |subscribe [channel...] 			|订阅消息|
+  |subscribe [channel...] 			|取消订阅|
+  |psubscribe [pattern...] 		|订阅符合条件的频道|
+  |punsubscribe [pattern...] 		|取消订阅符合条件的频道|
+  |pubsub channels 				|列出至少有一个订阅者的频道|
+  |pubsub numpat 					|列出被订阅模式的数量|
+
+- 消息队列
+
+  ![消息队列](https://github.com/chenyaowu/redis/blob/master/image/message_queue.jpg)
+
+
+
+### 位图bitmap
+
+- 位图
+
+  ![bitmap](https://github.com/chenyaowu/redis/blob/master/image/bitmap.jpg)
+
+- API
+
+  | 命令 | 作用 |
+  | ---- | ---- |
+  |setbit key offset value 		|给位图指定索引设置值|
+  |getbit key offset  				|获取位图指定索引值|
+  |bitcount key [start end] 		|获取位图指定范围(start到end，单位为字节m，如果不指定就是获取全部)位值为1的个数|
+  |bitop op destkey key [key...] 	|做多个Bitmap的and(交集),or(并集),not(非),xor(异或)操作并将结果保存到destkey中|
+  |bitpos key targeBit[start] [end] |计算位图指定范围(start到end,单位为字节,如果不指定就是获取全部)第一个偏移量对应的值等于targetBit的位置|
+
+- 使用经验
+
+  1. type=string，最大512MB
+  2. 注意setbit时的偏移量，可能有较大耗时
+  3. 位图不是绝对好。
+
+
+
+
+
+## Redis持久化
+
+- 作用：redis所有数据保持在内存中，对数据的更新将异步地保存到磁盘中redis所有数据保持在内存中，对数据的更新将异步地保存到磁盘中
+- 持久化方式
+  - 快照（redis RDB)
+  - 写日志  (redis AOF)
+
+  
+
+### RDB
+
+![bitmap](https://github.com/chenyaowu/redis/blob/master/image/RDB.jpg)
