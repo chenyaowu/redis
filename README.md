@@ -38,6 +38,7 @@
   dir		       工作目录
 
 - Redis单线程(为什么那么快)
+
   1. **纯内存**
   2. **非阻塞IO**
   3. **避免线程切换和竞争消耗**
@@ -164,5 +165,201 @@
   | zremrangebyrank key start end                    | 删除指定排名内的升序元素             | O(log(n)+m) |
   | zremrangebyscore key minScore maxScore           | 删除指定分数内升序元素               | O(log(n)+m) |
 
-  
+## JedisAPI
 
+```JAVA
+Jedis jedis = new Jedis(String ip, int port); 	Jedis直连
+//Jedis连接池的使用
+GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+JedisPool jedisPool = new JedisPool(poolConfig,String ip,int port);
+Jedis jedis = jedisPool.getResource();
+```
+
+- 键相关
+
+  ```java
+  //清空数据
+  public String jedis.flushDB()
+  //判断key是否存在
+  public Boolean exists(String key)
+  //新增(覆盖)键值对
+  public String set(String key, String value)
+  //获取匹配正则表达式的key
+  public Set<String> keys(String pattern)
+  //删除key
+  public Long del(String key)
+  //设置key过期时间
+  public Long expire(String key, int seconds)
+  //获取key剩余生存时间
+  public Long	ttl(String key)
+  //移除key的生存时间限制
+  public Long persist(String key)
+  //查看key对应value的数据类型
+  public String type(String key)
+  ```
+
+- 字符串操作
+
+  ```java
+  //新增(存在则覆盖)键值对
+  public String set(String key, String value)
+  //新增(存在不插入)键值对
+  public Long setnx(String key, String value)
+  //新增数据并设置有效时间
+  public String setex(String key, int seconds, String value)
+  //删除key
+  public Long del(String key)
+  //获取key对应的值
+  public String get(String key)
+  //在key对应的值后面追加value
+  public Long append(String key, String value)
+  //增加多个键值对
+  public String mset(String... keysvalues)
+  //获取多个key对应的值
+  public List<String> mget(String... keys)
+  //删除多个key对应的value
+  public Long del(String... keys)
+  //获取key对应的value并更新value
+  public String getSet(String key, String value)
+  //获取key对应value第i到j个字符
+  public String getrange(String key, long startOffset, long endOffset)
+  ```
+
+- 整数和浮点数操作
+
+  ```java
+  //新增(存在则覆盖)键值对
+  public String set(String key, String value)
+  //获取key对应的值
+  public String get(String key)
+  //将key对应的value自增1
+  public Long incr(String key)
+  //将key对应的value增加increment
+  public Long incrBy(String key, long increment)
+  //将key对应的value自减1
+  public Long decr(String key)
+  //将key对应的value减increment
+  public Long decrBy(String key, long increment)
+  ```
+
+- 列表操作
+
+  ```java
+  //往key中左插入strings
+  public Long lpush(String key, String... strings)
+  //往key中右插入strings
+  public Long rpush(String key, String... strings)
+  //获取key对应List区间[i, j]元素
+  public List<String> lrange(String key, long start, long stop)
+  //根据count值，从列表中删除所有value相等的项，count>0，从左到右，删除最多count个value相等的项。count<0，从右到左，删除最多-count个value相等的项，count=0，删除所有value相等的项
+  public Long lrem(String key, long count, String value)
+  //删除list区间[i, j]之外的元素
+  public String ltrim(String key, long start, long stop)
+  //左弹出一个元素
+  public String lpop(String key)
+  //右弹出一个元素
+  public String rpop(String key)
+  //修改key对应list指定下标元素
+  public String lset(String key,long index,String value)
+  //获取list长度
+  public Long llen(String key)
+  //获取key对应下标的元素
+  public String lindex(String key, long index)
+  //将key中对应的List中的元素从小到大排序
+  public List<String> sort(String key)
+  ```
+
+- 集合操作
+
+  ```java
+  //往key中添加集合
+  public Long sadd(String key, String... members)
+  //获取key对应的所有元素
+  public Set<String> smembers(String key)
+  //删除key中值为members的元素
+  public Long srem(String key,String... members)
+  //随机弹出一个元素
+  public String spop(String key)
+  //获取set中元素个数
+  public Long scard(String key)
+  //将元素member从srckey剪切到dstkey
+  public Long smove(String srckey, String dstkey, String member)
+  //获取集合交集
+  public Set<String> sinter(String... keys)
+  //获取集合并集
+  public Set<String> sunion(String... keys)
+  //获取集合差集
+  public Set<String> sdiff(String... keys)
+  ```
+
+- 哈希操作
+
+  ```java
+  //添加一个hash
+  public String hmset(String key, Map<String,String> hash) 			 
+  //往hash中插入一个元素（key-value)
+  public Long hset(String key,String field,String value) 	
+  //获取所有的元素
+  public Map<String,String> hgetAll(String key) 
+  //获取hash所有的元素key
+  public Set<String> hkeys(String key)
+  //获取hash所有的value
+  public List<String> hvals(String key)
+  //hash中对应的field自增1
+  public Long hincr(String key, String )
+  //hash中对应的field增加value
+  public Long hincrBy(String key, String field,long value) 
+  //删除hash中对应的field
+  public Long hdel(String key,String... fields) 	
+  //获取hash中元素的个数
+  public Long hlen(String key) 		
+  //判断hash中是否存在field
+  public Boolean hexists(String key, String field) 
+  //获取hash中元素
+  public List<String> hmget(String key,String... fields)         		 
+  ```
+
+- 有序集合操作
+
+  ```java
+  //向zset中添加一个集合
+  public Long zadd(String key,Map<String,Double> scoreMembers)
+  //向zset中添加一个元素
+  public Long zadd(String key,double score,String member)
+  //获取zset下标区间为[start,stop]元素（按分数排序）
+  public Set<String> zrange(String key,long start,long stop) 	
+  //获取zset下标区间为[start,stop]元素（ 按分数排序 Val-Score ）
+  public Set<Tuple> zrangeWithScores(String key,long start,long stop)
+  //获取zset分数区间为[min,max]的元素
+  public Set<String> zrangeByScore(String key,double min,double max)
+  //获取zset分数区间为[min,max]的Val-Score元素
+  public Set<String> zrangeByScoreWithScores(String key,double min,double max) //获取zset里值为member的score 
+  public Double zscore(String key,String member) 
+  //获取zset里值为member的排名
+  public Long zrank(String key, String member)
+  //删除zset里值为member的元素
+  public Long zrem(String key,String... members) 
+  //获取zset个数
+  public Long zcard(String key)
+  // 获取zset中分数范围在[min,max]元素的个数
+  public Long zcount(String key,double min,double max)
+  //zset中值为member的分数增加increment
+  public Double zincrby(String key, double increment, String member)   
+  ```
+
+- 排序
+
+  ```java
+  //生成排序对象
+  SortingParams sortingParams = new SortingParams(); 				
+  //获取排序后元素
+  public List<String> sort(String key, SortingParams sortingParameters)    
+  //按字母a-z排序
+  sortingParams.alpha();
+  //按数字升序排序
+  sortingParams.asc(); 
+  //按数字降序排序
+  sortingParams.desc();   
+  ```
+
+  
