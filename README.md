@@ -680,3 +680,13 @@ sortingParams.desc();
 ### RDB
 
 ![bitmap](https://github.com/chenyaowu/redis/blob/master/image/RDB.jpg)
+
+- 触发机制三种方式
+
+  - save(同步)
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save1.jpg)
+
+  - bgsave(异步)
+
+  - 自动(设置配置文件)
