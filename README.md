@@ -35,6 +35,7 @@
 - [Redis持久化](#Redis持久化)
   - [RDB](#RDB)
   - [AOF](#AOF)
+  - [RDB与AOF](#RDB与AOF)
   
 ## redis特性
 
@@ -687,6 +688,196 @@ sortingParams.desc();
 
     ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save1.jpg)
 
-  - bgsave(异步)
+    - save命令（redis>save）(阻塞，不消耗额外内存)
+
+      ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save2.jpg)
+
+    - 文件策略：如存在老的RDB文件，替换 
+
+    - 复杂度：O(n)
+
+  - bgsave(异步)（redis>bgsave）
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save3.jpg)
+
+    - 文件策略：如存在老的RDB文件，替换 
+    - 复杂度：O(n)
+
+  - sava和bgsave对比
+
+    | 命令     | save               | bgsave               |
+    | -------- | ------------------ | -------------------- |
+    | IO类型   | 同步               | 异步                 |
+    | 是否阻塞 | 是                 | 是（阻塞发生在fork） |
+    | 复杂度   | O(n)               | O(n)                 |
+    | 优点     | 不会消耗额外的内存 | 不阻塞客户端命令     |
+    | 缺点     | 阻塞客户端命令     | 需要fork，消耗内存   |
+
+    
 
   - 自动(设置配置文件)
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save4.jpg)
+
+    ```bash
+    #900秒中改变了1条数据则记录(不建议使用)
+    save 900 1
+    #300秒中改变了10条数据则记录(不建议使用)
+    save 300 10
+    #60秒中改变了10000条数据则记录(不建议使用)
+    save 60 10000
+    #rbd文件名
+    dbfilename dump-${port}.rdb
+    #rdb文件存放目录
+    dir /bigdiskpath
+    #rdb出现错误是否停止写入
+    stop-writes-on-bgsave-error yes
+    #rbd文件是否采用压缩格式
+    rdbcompression yes
+    #是否对rdb文件进行校验和检验
+    rdbchecksum yes
+    ```
+
+    - 触发机制-自动生成rdb文件
+      1. 全量复制
+      2. debug reload
+      3. shutdown
+
+- 总结
+
+  - RDB是Redis内存到硬盘的快照，用于持久化
+  - save通常会阻塞Redis
+  - bgsave不会阻塞Redis，但是会fork新进程
+  - save自动配置满足任一就会被执行
+  - 有些触发机制不容忽视
+
+
+
+### AOF
+
+- RDB存在的问题
+
+  - 耗时耗性能
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF1.jpg)
+
+  - 不可控、丢失数据
+
+- 运行原理
+
+  - 创建
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF2.jpg)
+
+  - 恢复
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF3.jpg)
+
+- 三种策略
+
+  - always
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF4.jpg)
+
+  - everysec(默认值)
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF5.jpg)
+
+  - no
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF6.jpg)
+
+  - 对比
+
+    | 三种策略 | 命令         | 缺点        | 优点          |
+    | -------- | ------------ | ----------- | ------------- |
+    | always   | 每一次       | IO开销大    | 不丢失数据    |
+    | everysec | 每秒         | 丢失1秒数据 | 只丢失1秒数据 |
+    | no       | 根据操作系统 | 不可控      | 不用管        |
+
+      
+
+  - AOF重写（优化AOF文件命令）
+
+    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF7.jpg)
+
+    - 作用：减少磁盘占用量、加速恢复速度
+
+    - 两种实现方式：
+
+      - bgrewiteaof命令
+
+        ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF8.jpg)
+
+      - AOF重写配置
+
+        ```bas
+        #使用aof基础
+        appendonly yes
+        ##文件名
+        appendfilename "appendonly-${port}.aof"  
+        ##策略
+        appendfsync everysec
+        ##目录
+        dir /bigdiskpath 	
+        ##aof重写的是否进行append操作
+        no-appendfsync-no-rewtire yes 
+        ##AOF文件增长率
+        auto-aof-rewrite-percentage
+        ##AOF文件重写需要的尺寸
+        auto-aof-rewrite-min-size
+        
+        ##统计相关
+        ##AOF当前尺寸(字节)
+        aof_current_size 
+        ##AOF上次启动和重写的尺寸(字节)
+        aof_base_size
+        ```
+
+
+
+### RDB与AOF
+|命令			|RDB  	|AOF|
+|----|----|----|
+|启动优先级 	|低 		|高|
+|体积	 		|小 		|大|
+|恢复速度 	|快 		|慢|
+|数据安全性   |丢数据  |根据策略决定|
+|操作轻重		|重 		|轻|
+
+- RDB最佳策略
+
+  - 关
+  - 集中管理
+  - 主从，从开
+
+- AOF最佳策略
+
+  - "开"缓存或者储存
+  - AOF重写集中管理
+  - everysec
+
+- 最佳策略
+
+  - 小分片
+  - 缓存或者储存
+  - 监控(硬盘、内存、负载、网络)
+  - 足够内存
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
