@@ -36,6 +36,7 @@
   - [RDB](#RDB)
   - [AOF](#AOF)
   - [RDB与AOF](#RDB与AOF)
+  - [持久化常见问题](#持久化常见问题)
   
 ## redis特性
 
@@ -864,20 +865,52 @@ sortingParams.desc();
   - 监控(硬盘、内存、负载、网络)
   - 足够内存
 
-  
+### 持久化常见问题
 
-  
+- fork操作(同步操作)，与内存量息息相关：内存越大，耗时越长(与机器类型有关)
 
-  
+  ```bash
+  #查看上次执行fork的时间
+  info:latest_fork_usec
+  ```
 
-  
+  - 改善fork:
+    - 优先使用物理机或者搞笑支持fork操作的虚拟化技术
+    - 控制redis实例最大可用内存:maxmemory
+    - 合理配置Linux内存分配策略:vm.overcommit_memory=1
+    - 降低fork频率：例如放宽AOF重写自动触发时机，不必要的全量复制
 
-  
+- 进程外开销
 
-  
+  - CPU 
+    - 开销：RDB和AOF文件生成，属于CPU密集型
+    - 优化：不做CPU绑定，不和CPU密集型部署
+  - 内存
+    - 开销：fork内存开销,copy-on-write
+    - 优化：echo never>/sys/kernel/mm/transparent_hugepage/enabled
+  - 硬盘
+    - 开销：AOF和RDB文件写入，可以结合iostat,iotop分析
+    -  优化：不要和高硬盘负载服务部署在一起、no-appendfsync-on-rewrite = yes、根据写入量决定磁盘类型、单机多实例持久化文件目录可以考虑分盘
 
-  
+- AOF追加阻塞
 
-  
+  ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF9.jpg)
 
-  
+  - AOF阻塞定位：
+
+    - redis日志：Asynchronous AOF fsync is taking too long (disk is busy?). Writing the AOF buffer without waiting for fsync to complete, this may slow down Redis
+
+    - info persistence
+
+      ```bash
+      #发生阻塞数量
+      127.0.0.1:6379>info persistence 
+      aof_delayed_fsync:100
+      ```
+
+    - 通过硬盘
+
+      ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF10.jpg)
+
+    ​	
+
