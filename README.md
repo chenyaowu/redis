@@ -37,6 +37,11 @@
   - [AOF](#AOF)
   - [RDB与AOF](#RDB与AOF)
   - [持久化常见问题](#持久化常见问题)
+- [Redis主从复制](#Redis主从复制)
+  - [单机redis存在的问题](#单机redis存在的问题)
+  - [Redis主从复制作用](#Redis主从复制作用)
+  - [实现方式](#实现方式)
+
   
 ## redis特性
 
@@ -699,7 +704,7 @@ sortingParams.desc();
 
   - bgsave(异步)（redis>bgsave）
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save3.jpg)
+    ![bgsave](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save3.jpg)
 
     - 文件策略：如存在老的RDB文件，替换 
     - 复杂度：O(n)
@@ -718,7 +723,7 @@ sortingParams.desc();
 
   - 自动(设置配置文件)
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save4.jpg)
+    ![自动](https://github.com/chenyaowu/redis/blob/master/image/RDB_Save4.jpg)
 
     ```bash
     #900秒中改变了1条数据则记录(不建议使用)
@@ -760,7 +765,7 @@ sortingParams.desc();
 
   - 耗时耗性能
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF1.jpg)
+    ![耗时耗性能](https://github.com/chenyaowu/redis/blob/master/image/AOF1.jpg)
 
   - 不可控、丢失数据
 
@@ -768,25 +773,25 @@ sortingParams.desc();
 
   - 创建
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF2.jpg)
+    ![创建](https://github.com/chenyaowu/redis/blob/master/image/AOF2.jpg)
 
   - 恢复
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF3.jpg)
+    ![恢复](https://github.com/chenyaowu/redis/blob/master/image/AOF3.jpg)
 
 - 三种策略
 
   - always
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF4.jpg)
+    ![always](https://github.com/chenyaowu/redis/blob/master/image/AOF4.jpg)
 
   - everysec(默认值)
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF5.jpg)
+    ![everysec](https://github.com/chenyaowu/redis/blob/master/image/AOF5.jpg)
 
   - no
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF6.jpg)
+    ![no](https://github.com/chenyaowu/redis/blob/master/image/AOF6.jpg)
 
   - 对比
 
@@ -800,7 +805,7 @@ sortingParams.desc();
 
   - AOF重写（优化AOF文件命令）
 
-    ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF7.jpg)
+    ![AOF重写](https://github.com/chenyaowu/redis/blob/master/image/AOF7.jpg)
 
     - 作用：减少磁盘占用量、加速恢复速度
 
@@ -808,7 +813,7 @@ sortingParams.desc();
 
       - bgrewiteaof命令
 
-        ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF8.jpg)
+        ![bgrewiteaof命令](https://github.com/chenyaowu/redis/blob/master/image/AOF8.jpg)
 
       - AOF重写配置
 
@@ -894,7 +899,7 @@ sortingParams.desc();
 
 - AOF追加阻塞
 
-  ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF9.jpg)
+  ![AOF追加阻塞](https://github.com/chenyaowu/redis/blob/master/image/AOF9.jpg)
 
   - AOF阻塞定位：
 
@@ -910,7 +915,51 @@ sortingParams.desc();
 
     - 通过硬盘
 
-      ![RDB_Save](https://github.com/chenyaowu/redis/blob/master/image/AOF10.jpg)
+      ![通过硬盘](https://github.com/chenyaowu/redis/blob/master/image/AOF10.jpg)
 
     ​	
+
+## Redis主从复制
+
+### 单机redis存在的问题
+
+- 机器故障，数据丢失，连接失败
+- 容量瓶颈
+- 3.QPS瓶颈
+
+### Redis主从复制作用
+
+- 数据副本
+- 扩展读性能
+
+- 一主一从
+
+![Redis——OneToOne](https://github.com/chenyaowu/redis/blob/master/image/master_slave1.jpg)
+
+- 一主多从
+
+![Redis——OneToOne](https://github.com/chenyaowu/redis/blob/master/image/master_slave2.jpg)
+
+
+
+### 实现方式
+
+- 命令方式(slave of)
+
+  - 开启复制
+
+    ![slave of](https://github.com/chenyaowu/redis/blob/master/image/master_slave3.jpg)
+
+  - 取消复制
+
+    ![slave of no one](https://github.com/chenyaowu/redis/blob/master/image/master_slave4.jpg)
+
+- 配置方式(修改配置文件)
+
+  ```bash
+  slaveof ip port
+  slave-read-only yes
+  ```
+
+  
 

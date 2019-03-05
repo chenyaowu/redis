@@ -1,26 +1,3 @@
-单机redis存在的问题
-1.机器故障，数据丢失，连接失败
-2.容量瓶颈
-3.QPS瓶颈
-
-主从复制作用
-数据副本
-扩展读性能
-
-实现方式
-1.slaveof命令
-eg:
-:6380(从节点)
-:6379(主节点)
-设置     127.0.0.1:6380>slaveof 127.0.0.1 6379
-取消设置 127.0.0.1:6380>slaveof no one 
-
-2.配置
-从节点配置
-slaveof ip port
-slave-read-only yes
-
-
 全量复制
 1.slave ———— psync?-1 ————> master
 2.master ———— +FULLRESYNC{runId}{offset} ————> slave
