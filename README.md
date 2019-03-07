@@ -41,6 +41,10 @@
   - [单机redis存在的问题](#单机redis存在的问题)
   - [Redis主从复制作用](#Redis主从复制作用)
   - [实现方式](#实现方式)
+  - [全量复制](#全量复制)
+  - [部分复制](#部分复制)
+  - [故障处理](#故障处理)
+  - [开发运维中的问题](#开发运维中的问题)
 
   
 ## redis特性
@@ -961,5 +965,74 @@ sortingParams.desc();
   slave-read-only yes
   ```
 
-  
+
+### 全量复制
+
+![全量复制](https://github.com/chenyaowu/redis/blob/master/image/master_slave5.jpg)
+
+- 开销
+  1. bgsave时间
+  2. RDB文件网络传输时间
+  3. 从节点清空数据时间
+  4. 从节点加载RDB时间
+  5. 可能的AOF重写时间
+
+### 部分复制
+
+- since redis2.8
+
+![部分复制](https://github.com/chenyaowu/redis/blob/master/image/master_slave6.jpg)
+
+
+
+### 故障处理
+
+- Slave故障
+
+  ![Slave故障](https://github.com/chenyaowu/redis/blob/master/image/master_slave7.jpg)
+
+- master故障
+
+  ![master故障](https://github.com/chenyaowu/redis/blob/master/image/master_slave8.jpg)
+
+- 使用redis sentinel
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/master_slave9.jpg)
+
+
+
+### 开发运维中的问题
+
+- 读写分离:读流量分摊到从节点
+
+  - 可能遇到的问题：
+    - 复制数据延迟
+    - 读到过期数据
+    - 从节点故障
+
+- 主从配置不一致
+
+  - 例如maxmemory不一致：丢失数据
+  - 例如数据结构优化参数(hash-max-ziplist-entries):内存不一致
+
+- 规避全量复制
+
+  -  第一次全量复制，第一次不可避免
+
+    - 小主节点，低峰
+  -  节点run id不匹配
+
+    -   主节点重启(run id变化)
+    -   故障转移，例如哨兵或集群
+  -  复制积压缓冲区不足
+
+    - 网络中断，部分复制无法满足
+    - 增大复制缓冲区配置rel_backlog_size，网络"增强"
+  -  规避复制风暴(一个主节点多个从节点，主节点宕机，重启，多个从节点复制数据)
+     - 单主节点复制风暴
+       - 问题：主节点重启，多从节点复制
+       -  解决：更换复制拓扑
+     - 单机器复制风暴
+       -   问题：机器宕机后，大量全量复制
+       -  解决：主节点分散多机器
 
