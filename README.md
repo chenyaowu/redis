@@ -1048,7 +1048,7 @@ sortingParams.desc();
        -   问题：机器宕机后，大量全量复制
        -  解决：主节点分散多机器
 
-## Redis Sentinel
+## RedisSentinel
 
 ### 主从复制问题
 
