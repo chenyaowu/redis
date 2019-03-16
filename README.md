@@ -45,6 +45,18 @@
   - [部分复制](#部分复制)
   - [故障处理](#故障处理)
   - [开发运维中的问题](#开发运维中的问题)
+- [Redis Sentinel](#Redis Sentinel)
+  - [主从复制问题](#主从复制问题)
+  - [架构](#架构)
+  - [安装与配置](#安装与配置)
+  - [客户端实现基本原理](#客户端实现基本原理)
+  - [客户端接入流程](#客户端接入流程)
+  - [Jedis实现](#Jedis实现)
+  - [内部三个定时任务](#内部三个定时任务)
+  - [主观下线和客观下线](#主观下线和客观下线)
+  - [领导者选举](#领导者选举)
+  - [故障转移](#故障转移)
+  - [选择“合适的”slave节点](#选择“合适的”slave节点)
 
   
 ## redis特性
@@ -1036,3 +1048,237 @@ sortingParams.desc();
        -   问题：机器宕机后，大量全量复制
        -  解决：主节点分散多机器
 
+## Redis Sentinel
+
+### 主从复制问题
+
+- 手动故障转移
+- 写能力和存储能力受限
+
+### 架构
+
+![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel1.jpg)
+
+![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel5.jpg)
+
+- 故障转移
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel2.jpg)
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel3.jpg)
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel4.jpg)
+
+### 安装与配置
+
+- redis-7000.conf
+
+  ```bash
+  port 7000
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "7000.log"
+  dbfilename "dump-7000.rdb"
+  ```
+
+- redis-7001.conf
+
+  ```bash
+  port 7001
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "7001.log"
+  dbfilename "dump-7001.rdb"
+  slaveof 127.0.0.1 7000
+  ```
+
+- redis-7002.conf
+
+  ```bash
+  port 7002
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "7002.log"
+  dbfilename "dump-7002.rdb"
+  slaveof 127.0.0.1 7000
+  ```
+
+- redis-sentinel-26379.conf
+
+  ```b
+  port 26379
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "26379.log"
+  sentinel monitor mymaster 127.0.0.1 7000 2
+  sentinel down-after-milliseconds mymaster 30000
+  sentinel parallel-syncs mymaster 1
+  sentinel failover-timeout mymaster 180000
+  ```
+
+- redis-sentinel-26380.conf
+
+  ```bash
+  port 26380
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "26380.log"
+  sentinel monitor mymaster 127.0.0.1 7000 2
+  sentinel down-after-milliseconds mymaster 30000
+  sentinel parallel-syncs mymaster 1
+  sentinel failover-timeout mymaster 180000		
+  
+  ```
+
+- redis-sentinel-26381.conf
+
+  ```bash
+  port 26381
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "26381.log"
+  sentinel monitor mymaster 127.0.0.1 7000 2
+  sentinel down-after-milliseconds mymaster 30000
+  sentinel parallel-syncs mymaster 1
+  sentinel failover-timeout mymaster 180000	
+  ```
+
+
+
+### 客户端实现基本原理
+
+1. Step1
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel6.jpg)
+
+2. Step2
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel7.jpg)
+
+3. Step3
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel8.jpg)
+
+4. Step4
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel9.jpg)
+
+- 基本原理
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel10.jpg)
+
+### 客户端接入流程
+
+1. Sentinel地址集合
+2. masterName
+3. 不是代理模式
+
+### Jedis实现
+
+```java
+String masterName = "mymaster";
+Set<String> sentinelSet = new HashSet();
+set.add("127.0.0.1:26379");
+set.add("127.0.0.1:26380");
+set.add("127.0.0.1:26381");
+
+JedisSentinelPool sentinelPool = new JedisSentinePool(masterName, sentinelSet);
+Jedis jedis = null;
+try{
+	jedis = sentinelPool.getResource();
+}catch(Exception e){
+	e.printStack();	
+}finally{
+	if(jedis != null){
+		jedis.close();
+	}
+}
+
+```
+
+### 内部三个定时任务
+
+1. 每10秒info
+
+   - 发现slave节点
+   - 确认主从关系
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel11.jpg)
+
+2. 每2秒发布订阅（每2秒每个sentinel通过master节点的channel交换信息(pub/sub)）
+
+   - 通过_sentinel_:hello频道交互
+   - 交互对节点的“看法”和自身信息
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel12.jpg)
+
+3. 每1秒ping(每1秒每个sentinel对其他sentinel和redis执行ping)
+
+   - 心跳检测，失败判定依据
+
+   ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel13.jpg)
+
+
+
+### 主观下线和客观下线
+
+- 主观下线：每个sentinel节点对redis节点失败的“偏见”
+- 客观下线：所有sentinel节点对redis节点失败“达成共识”（超过quorum个统一）
+
+### 领导者选举
+
+- 原因：只有一个sentinel节点完成故障转移
+
+- 选举：通过sentinel is-master-down-by-addr命令都希望成为领导者
+  1. 每个做主观下线的Sentinel节点向其他Sentinel节点发送命令，要求将它设置为领导者
+  2. 收到命令的Sentinel节点如果没有同意通过其他Sentinel节点发送的命令，那么将同意该请求，否则拒绝
+  3. 如果该Sentinel节点发现自己的票数已经超过Sentinel集合半数且超过quorum,那么它将成为领导者
+  4. 如果此过程有过个Sentinel节点成为领导者，那么将等待一段时间重新进行选举。
+
+### 故障转移
+
+- sentinel领导者节点完成
+  1. 从slave节点中选出一个“合适的”节点作为新的master节点
+  2. 对上面的slave节点执行slaveof no one命令让它成为master节点
+  3. 向剩余的slave节点发送命令，让它们成为新的master节点的slave节点，复制规则和parallel-syncs参数有关
+  4. 更新对原来的master节点配置成slave，并保持着对其“关注”，当其恢复后命令它去复制新的master节点。
+
+### 选择“合适的”slave节点
+
+1. 选择slave-priprity(slave节点优先级)最高的slave节点，如果存在则返回，不存在则继续
+2. 选择复制偏移量最大的slave节点(复制最完整)，如果存在则返回，不存在则继续
+3. 选择runId最小的slave节点
+
+
+
+### 常见问题
+
+- 节点运维
+
+  原因：
+
+  机器下线：例如过保等情况机器
+
+  性能不足：例如CPU、内存、硬盘、网络等
+
+  节点自身故障：例如服务不稳定等
+
+  - 节点下线
+    - 主节点：sentinel failover <masterName>
+    - 从节点/Sentinel节点：临时下线还是永久下线，例如是否做一些清理工作，但是要考虑读写分离的情况
+  - 节点上线
+    - 主节点：sentinel failover进行替换
+    - 从节点：slaveof即可，sentinel节点可以感知
+    - sentinel节点：参考其他sentinel节点启动
+
+- 高可用读写分离
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisSentinel14.jpg)
+
+  - 从节点作用
+    - 副本：高可用的基础
+    - 扩展：读能力
+  - 三个“消息”
+    - +switch-master : 切换主节点（从节点晋升主节点）
+    - +convert-to-slave：切换从节点（原主节点将为从节点）
+    - +sdown：主观下线。
