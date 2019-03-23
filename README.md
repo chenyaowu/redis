@@ -57,6 +57,11 @@
   - [领导者选举](#领导者选举)
   - [故障转移](#故障转移)
   - [选择“合适的”slave节点](#选择“合适的”slave节点)
+- [RedisCluster](#RedisCluster)
+  - [为什么需要redis集群](#为什么需要redis集群)
+  - [分布方式](#分布方式)
+  - [基本架构](#基本架构)
+  - [安装](#安装)
 
   
 ## redis特性
@@ -1282,3 +1287,232 @@ try{
     - +switch-master : 切换主节点（从节点晋升主节点）
     - +convert-to-slave：切换从节点（原主节点将为从节点）
     - +sdown：主观下线。
+
+## RedisCluster
+
+### 为什么需要redis集群
+
+1. 并发量不足 10W OPS/s
+2. 单机存储数据量不足
+3. 网卡流量不足
+
+### 分布方式 
+| 分布方式 | 特点                                                       | 典型产品                         |
+| -------- | ---------------------------------------------------------- | -------------------------------- |
+| 哈希分区 | 数据分散度高，键值分布业务无关，无法顺序访问，支持批量操作 | 一致性哈希Memcache Redis Cluster |
+| 顺序分区 | 数据分散度易倾斜，键值业务相关，可顺序访问，支持批量操作   | BigTable HBase                   |
+- 哈希分区方式
+  1. 节点取余分区
+     - hash(key)%nodes
+     - 客户端分片：哈希 + 取余
+     - 节点伸缩：数据节点关系变化，导致数据迁移
+     - 迁移数量和添加节点数量有关：建议翻倍扩容
+  2. 一致性哈希分区
+     - 客户端分片：哈希 + 顺时针（优化取余） 
+     - 节点伸缩：只影响邻近节点，但是还是有数据迁移
+     - 翻倍伸缩：保证最小迁移数据和负载均衡
+  3. 虚拟槽分区
+     - 预设虚拟槽：每个槽映射一个数据子集，一般比节点数大
+     - 良好的哈希函数：例如CRC16
+     - 服务端管理节点、槽、数据：例如Redis Cluster
+
+### 基本架构
+
+- 单机架构
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster21.jpg)
+
+- 分布式架构
+
+  ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster22.jpg)
+
+- Redis Cluster架构
+
+  - 节点
+
+    ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster23.jpg)
+
+  - meet
+
+    ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster24.jpg)
+
+    ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster25.jpg)
+
+  - 指派槽
+
+    ![redis sentinel](https://github.com/chenyaowu/redis/blob/master/image/RedisCluster26.jpg)
+
+  - 复制
+
+  - Redis Cluster特性：复制、高可用、分片
+
+
+### 安装
+
+- 原生安装(命令)
+  1. 配置开启Redis
+
+     ```bash
+     port ${port}
+     daemonize yes
+     dir "/opt/soft/redis/data"
+     logfile "${port}.log"
+     dbfilename "dump-${port}.rdb"
+     cluster-enabled yes
+     cluster-config-file node-${port}.conf
+     
+     redis-server reids-7000.conf
+     redis-server reids-7001.conf
+     redis-server reids-7002.conf
+     redis-server reids-7003.conf
+     redis-server reids-7004.conf
+     redis-server reids-7005.conf
+     ```
+
+  2. meet
+
+     ```bash
+     cluster meet ip port
+     
+     redis-cli -p 7000 cluster meet 127.0.0.1 7001
+     redis-cli -p 7000 cluster meet 127.0.0.1 7002
+     redis-cli -p 7000 cluster meet 127.0.0.1 7003
+     redis-cli -p 7000 cluster meet 127.0.0.1 7004
+     redis-cli -p 7000 cluster meet 127.0.0.1 7005
+     ```
+
+  3. Cluster节点主要配置
+
+     ```bash
+     cluster-enabled yes
+     cluster-node-timeout 15000
+     cluster-config-file "node.conf"
+     cluster-require-full-coverage yes
+     ```
+
+  4. 分配槽
+
+     ```bash
+     cluster addslots slot [slot...]
+     
+     redis-cli -h 127.0.0.1 -p 7000 cluster addslots{0...5461}
+     redis-cli -h 127.0.0.1 -p 7001 cluster addslots{5462...10922}
+     redis-cli -h 127.0.0.1 -p 7002 cluster addslots{10923...16383}
+     ```
+
+  5. 设置主从
+
+     ```bash
+     cluster replicate node-id
+     
+     redis-cli -h 127.0.0.1 -p 7003 cluster replicate ${node-id-7000}
+     ```
+
+- 原生安装(具体操作)
+
+  1. 创建文件：redis-7000.conf、redis-7001.conf、redis-7002.conf、redis-7003.conf、redis-7004.conf、redis-7005.conf
+  ```bash
+  port ${port}
+  daemonize yes
+  dir "/opt/soft/redis/data"
+  logfile "${port}.log"
+  dbfilename "dump-${port}.rdb"
+  cluster-enabled yes
+  cluster-config-file node-${port}.conf
+  cluster-require-full-coverage no
+  ```
+  2. 启动
+
+     ```bash
+     redis-server redis-7000.conf
+     redis-server redis-7001.conf
+     redis-server redis-7002.conf
+     ...
+     ```
+
+  3. meet
+
+     ```bash
+     redis-cli -p 7000 cluster meet 127.0.0.1 7001
+     redis-cli -p 7000 cluster meet 127.0.0.1 7002
+     redis-cli -p 7000 cluster meet 127.0.0.1 7003
+     redis-cli -p 7000 cluster meet 127.0.0.1 7004
+     redis-cli -p 7000 cluster meet 127.0.0.1 7005
+     ```
+
+  4. 分配槽
+
+     生成脚本:addslots.sh
+
+     ```bash
+     start=$1
+     end=$2
+     port=$3
+     for slot in `seq ${start} ${end}`
+     do
+       echo "slot:${slot}"
+       redis-cli -p ${port} cluster addslots ${slot}
+     done
+     ```
+
+     执行
+
+     ```bash
+     sh addslots.sh 0 5461 7000
+     sh addslots.sh 5462 10922 7001
+     sh addslots.sh 10923 16383 7002
+     ```
+
+  5. 主从关系分配
+
+     ```bash
+     redis-cli -p 7003 cluster replicate 578cb9330ccdc1833f86646c749cfe46e08af563
+     redis-cli -p 7004 cluster replicate 8d0b7c518e8a80199ee1e8b540ba591dbb629f7a
+     redis-cli -p 7005 cluster replicate 8d0b7c518e8a80199ee1e8b540ba591dbb629f7a
+     ```
+
+- 官方工具安装
+
+  1. 准备Ruby环境
+
+     ```bash
+     wget http://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.1.tar.gz
+     tar -xvf ruby-2.3.1.tar.gz
+     cd ruby-2.3.1
+     ./configure -prefix=/usr/local/ruby
+     make
+     make install
+     ```
+
+  2. 安装rubygem redis
+
+     ```bash
+     wget http://rubygems.org/downloads/redis-3.3.0.gem
+     sudo gem install -l redis-3.3.0.gem
+     ```
+
+  3. 安装reids-trib.rb
+
+     ```bash
+     cp redis-3.0.0/src/redis-trib.rb /usr/local/bin/redis-trib 
+     ```
+
+  4. 启动
+
+     ```ba
+     redis-server redis-7000.conf
+     redis-server redis-7001.conf
+     redis-server redis-7002.conf
+     ...
+     
+     redis-trib create --replicas 1 127.0.0.1:7000 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005
+     ```
+
+     
+
+
+
+   
+
+
+
